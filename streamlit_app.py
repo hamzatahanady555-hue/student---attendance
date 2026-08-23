@@ -1,10 +1,9 @@
 import streamlit as st
 import pandas as pd
-from io import BytesIO
 
 # إعدادات الصفحة والعنوان
 st.set_page_config(page_title="نظام الحضور الشامل", layout="centered")
-st.title("📝 نظام إدارة حضور الطلاب والمراحل (مع الحذف والتعديل)")
+st.title("📝 نظام إدارة حضور طلاب ومراحل السنتر")
 
 # إنشاء قاعدة بيانات مؤقتة وجعداد للأكواد المتسلسلة داخل الجلسة
 if "students_database" not in st.session_state:
@@ -12,7 +11,7 @@ if "students_database" not in st.session_state:
 if "next_code" not in st.session_state:
     st.session_state.next_code = 1020  # البداية من كود رقم 1020 الذي حددته
 
-# تقسيم الواجهة إلى أربعة تبويبات (TABS) بعد إضافة إدارة الطلاب
+# تقسيم الواجهة إلى أربعة تبويبات (TABS)
 tab1, tab2, tab3, tab4 = st.tabs([
     "📋 تسجيل طالب جديد", 
     "⏱️ تسجيل حضور الحصة", 
@@ -89,16 +88,14 @@ with tab3:
             
             st.markdown("---")
             
-            output = BytesIO()
-            with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-                df_filtered.to_excel(writer, index=False, sheet_name=f'كشف {selected_grade}')
-            processed_data = output.getvalue()
+            # تحويل الجدول لكود نصي بسيط للتحميل مباشرة بدون مكتبات خارجية معقدة
+            csv_data = df_filtered.to_csv(index=False).encode('utf-8-sig')
             
             st.download_button(
-                label=f"📥 تحميل كشف غياب وحضور ({selected_grade}) بصيغة Excel",
-                data=processed_data,
-                file_name=f"كشف_حضور_{selected_grade}.xlsx",
-                mime="application/vnd.ms-excel"
+                label=f"📥 تحميل كشف غياب وحضور ({selected_grade}) بصيغة Excel/CSV",
+                data=csv_data,
+                file_name=f"كشف_حضور_{selected_grade}.csv",
+                mime="text/csv"
             )
             
             st.write(f"📋 **جدول طلاب مرحلة ({selected_grade}) الحالي:**")
@@ -135,7 +132,7 @@ with tab4:
                     st.rerun()
                 
                 st.markdown("---")
-                st.markdown("### 2️⃣ خيار الحذف النهائي (إذا كان الطالب لن يحضر مجدداً):")
+                st.markdown("### 2️⃣ خيار الحذف النهائي:")
                 if st.button("❌ حذف الطالب نهائياً من النظام", type="primary"):
                     del st.session_state.students_database[manage_code]
                     st.success("🗑️ تم حذف الطالب وإزالة كوده من الكشوفات تماماً!")

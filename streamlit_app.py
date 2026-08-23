@@ -8,7 +8,7 @@ st.title("📝 نظام تسجيل الطلاب وتوليد الأكواد با
 if "students_database" not in st.session_state:
     st.session_state.students_database = {}
 if "next_code" not in st.session_state:
-    st.session_state.next_code = 5642  # البداية من كود رقم 5642 الذي حددته
+    st.session_state.next_code = 5642  # البداية من كود رقم 1020 الذي حددته
 
 # تقسيم الواجهة إلى تبويبين (TABS)
 tab1, tab2 = st.tabs(["📋 تسجيل طالب جديد", "⏱️ تسجيل حضور الحصة"])

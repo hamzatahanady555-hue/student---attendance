@@ -3,8 +3,8 @@ import pandas as pd
 from io import BytesIO
 
 # إعدادات الصفحة والعنوان
-st.set_page_config(page_title="نظام الحضور والغياب للمراحل", layout="centered")
-st.title("📝 نظام إدارة حضور وغياب الطلاب حسب المرحلة الدراسية")
+st.set_page_config(page_title="نظام الحضور الشامل", layout="centered")
+st.title("📝 نظام إدارة حضور الطلاب والمراحل (مع الحذف والتعديل)")
 
 # إنشاء قاعدة بيانات مؤقتة وجعداد للأكواد المتسلسلة داخل الجلسة
 if "students_database" not in st.session_state:
@@ -12,27 +12,24 @@ if "students_database" not in st.session_state:
 if "next_code" not in st.session_state:
     st.session_state.next_code = 1020  # البداية من كود رقم 1020 الذي حددته
 
-# تقسيم الواجهة إلى ثلاثة تبويبات (TABS)
-tab1, tab2, tab3 = st.tabs(["📋 تسجيل طالب جديد", "⏱️ تسجيل حضور الحصة", "📊 إحصائيات الحضور والغياب"])
+# تقسيم الواجهة إلى أربعة تبويبات (TABS) بعد إضافة إدارة الطلاب
+tab1, tab2, tab3, tab4 = st.tabs([
+    "📋 تسجيل طالب جديد", 
+    "⏱️ تسجيل حضور الحصة", 
+    "📊 إحصائيات الحضور والغياب",
+    "⚙️ تعديل وحذف الطلاب"
+])
+
+# قائمة المراحل الدراسية الثابتة
+grades_list = ["أولى إعدادي", "ثانية إعدادي", "ثالثة إعدادي", "أولى ثانوي", "ثانية ثانوي", "ثالثة ثانوي"]
 
 with tab1:
     st.subheader("إدخال بيانات الطالب وتحديد مرحلته")
-    name = st.text_input("اسم الطالب")
+    name = st.text_input("اسم الطالب الجديد")
+    grade = st.selectbox("المرحلة الدراسية للطالب:", grades_list, key="add_grade")
+    phone = st.text_input("رقم تليفون الطالب", key="add_phone")
+    father_phone = st.text_input("رقم تليفون الأب", key="add_father_phone")
     
-    # قائمة اختيار المرحلة الدراسية للطالب
-    grade = st.selectbox("المرحلة الدراسية للطالب:", [
-        "أولى إعدادي", 
-        "ثانية إعدادي", 
-        "ثالثة إعدادي", 
-        "أولى ثانوي", 
-        "ثانية ثانوي", 
-        "ثالثة ثانوي"
-    ])
-    
-    phone = st.text_input("رقم تليفون الطالب")
-    father_phone = st.text_input("رقم تليفون الأب")
-    
-    # عرض الكود القادم الذي سيحصل عليه الطالب تلقائياً
     current_assigned_code = str(st.session_state.next_code)
     st.info(f"💡 الطالب القادم سيحصل تلقائياً على كود رقم: {current_assigned_code}")
     
@@ -40,7 +37,6 @@ with tab1:
         if not name:
             st.error("❌ يرجى إدخال اسم الطالب أولاً!")
         else:
-            # حفظ الطالب بالكود الرقمي المتسلسل وتحديد مرحلته الدراسية وحالته الافتراضية "غائب"
             st.session_state.students_database[current_assigned_code] = {
                 "كود الطالب": current_assigned_code,
                 "اسم الطالب": name,
@@ -49,9 +45,7 @@ with tab1:
                 "رقم تليفون الأب": father_phone,
                 "حالة الحضور": "غائب"
             }
-            st.success(f"✅ تم تسجيل الطالب: {name} ({grade}) بنجاح! كود الطالب هو: {current_assigned_code}")
-            
-            # زيادة العداد بمقدار 1 للطالب التالي وراءه مباشرة
+            st.success(f"✅ تم تسجيل الطالب: {name} ({grade}) بنجاح! كوده هو: {current_assigned_code}")
             st.session_state.next_code += 1
             st.rerun()
 
@@ -70,25 +64,12 @@ with tab2:
 
 with tab3:
     st.subheader("📈 كشف الحضور والغياب حسب الصف")
-    
     if not st.session_state.students_database:
         st.info("💡 لا يوجد طلاب مسجلين في النظام حتى الآن.")
     else:
-        # تحويل البيانات بالكامل إلى جدول منظم لسهولة الفرز والتصفية
         df_all = pd.DataFrame(st.session_state.students_database.values())
+        selected_grade = st.selectbox("اختر المرحلة لعرض إحصائياتها منفصلة:", ["الكل"] + grades_list)
         
-        # فلتر علوي للمدرس لاختيار الصف الذي يريد مراجعته لوحده
-        selected_grade = st.selectbox("اختر المرحلة لعرض إحصائياتها بشكل منفصل:", [
-            "الكل",
-            "أولى إعدادي", 
-            "ثانية إعدادي", 
-            "ثالثة إعدادي", 
-            "أولى ثانوي", 
-            "ثانية ثانوي", 
-            "ثالثة ثانوي"
-        ])
-        
-        # تصفية الجدول بناءً على اختيار المدرس
         if selected_grade == "الكل":
             df_filtered = df_all
         else:
@@ -97,12 +78,10 @@ with tab3:
         if df_filtered.empty:
             st.warning(f"⚠️ لا يوجد طلاب مسجلين في مرحلة ({selected_grade}) حتى الآن.")
         else:
-            # حساب الأرقام بدقة للمرحلة المختارة فقط
             total_registered = len(df_filtered)
             total_present = len(df_filtered[df_filtered["حالة الحضور"] == "حاضر"])
             total_absent = total_registered - total_present
             
-            # عرض العدادات للمرحلة المختارة
             col1, col2, col3 = st.columns(3)
             col1.metric(f"إجمالي طلاب ({selected_grade})", total_registered)
             col2.metric("🟢 عدد الحاضرين", total_present)
@@ -110,13 +89,11 @@ with tab3:
             
             st.markdown("---")
             
-            # تجهيز ملف Excel للمرحلة المختارة فقط للتحميل الدائم
             output = BytesIO()
             with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-                df_filtered.to_excel(writer, index=False, sheet_name=f'كشف حضور {selected_grade}')
+                df_filtered.to_excel(writer, index=False, sheet_name=f'كشف {selected_grade}')
             processed_data = output.getvalue()
             
-            # زر التحميل المنفصل
             st.download_button(
                 label=f"📥 تحميل كشف غياب وحضور ({selected_grade}) بصيغة Excel",
                 data=processed_data,
@@ -125,5 +102,43 @@ with tab3:
             )
             
             st.write(f"📋 **جدول طلاب مرحلة ({selected_grade}) الحالي:**")
-            # عرض جدول المرحلة المختارة فقط
             st.dataframe(df_filtered[["كود الطالب", "اسم الطالب", "المرحلة الدراسية", "حالة الحضور", "رقم تليفون الطالب"]], use_container_width=True)
+
+with tab4:
+    st.subheader("⚙️ تعديل بيانات طالب أو حذفه نهائياً")
+    if not st.session_state.students_database:
+        st.info("💡 قاعدة البيانات فارغة، لا يوجد طلاب لتعديلهم أو حذفهم.")
+    else:
+        manage_code = st.text_input("أدخل كود الطالب المراد (تعديله / حذفه):")
+        
+        if manage_code:
+            if manage_code in st.session_state.students_database:
+                current_student = st.session_state.students_database[manage_code]
+                st.warning(f"⚠️ الكود يخص الطالب الحالي: **{current_student['اسم الطالب']}** ({current_student['المرحلة الدراسية']})")
+                
+                st.markdown("### 1️⃣ خيار التعديل (أو تبديل طالب بآخر):")
+                new_name = st.text_input("الاسم الجديد (أو اسم الطالب البديل):", value=current_student['اسم الطالب'])
+                new_grade = st.selectbox("المرحلة الدراسية الجديدة:", grades_list, index=grades_list.index(current_student['المرحلة الدراسية']))
+                new_phone = st.text_input("رقم تليفون الطالب الجديد:", value=current_student['رقم تليفون الطالب'])
+                new_father_phone = st.text_input("رقم تليفون الأب الجديد:", value=current_student['رقم تليفون الأب'])
+                
+                if st.button("💾 حفظ التعديلات الجديدة"):
+                    st.session_state.students_database[manage_code] = {
+                        "كود الطالب": manage_code,
+                        "اسم الطالب": new_name,
+                        "المرحلة الدراسية": new_grade,
+                        "رقم تليفون الطالب": new_phone,
+                        "رقم تليفون الأب": new_father_phone,
+                        "حالة الحضور": current_student['حالة الحضور']
+                    }
+                    st.success("✅ تم تحديث بيانات الطالب بنجاح!")
+                    st.rerun()
+                
+                st.markdown("---")
+                st.markdown("### 2️⃣ خيار الحذف النهائي (إذا كان الطالب لن يحضر مجدداً):")
+                if st.button("❌ حذف الطالب نهائياً من النظام", type="primary"):
+                    del st.session_state.students_database[manage_code]
+                    st.success("🗑️ تم حذف الطالب وإزالة كوده من الكشوفات تماماً!")
+                    st.rerun()
+            else:
+                st.error("❌ هذا الكود غير موجود في النظام، يرجى مراجعة الرقم.")
